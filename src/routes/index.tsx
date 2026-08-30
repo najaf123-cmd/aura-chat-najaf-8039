@@ -1,24 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ChatApp } from "@/components/chat/ChatApp";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Aria — 3D Glass AI Chat Assistant" },
+      {
+        name: "description",
+        content:
+          "Chat with Aria, a polite AI assistant in a premium 3D glassmorphism interface with three switchable colour themes.",
+      },
+      { property: "og:title", content: "Aria — 3D Glass AI Chat Assistant" },
+      {
+        property: "og:description",
+        content:
+          "A polished, responsive 3D chatbot experience with glassmorphism depth and three colour themes.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: ChatApp,
 });
-
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
