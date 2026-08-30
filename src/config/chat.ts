@@ -4,7 +4,7 @@
  */
 export const CHAT_WEBHOOK_URL: string =
   import.meta.env["VITE_CHAT_WEBHOOK_URL"] ??
-  "http://localhost:5678/webhook/8039d74d-d0d0-4cc6-b147-b76b9f6bd804";
+  "https://enforcement-organisms-mixer-charitable.trycloudflare.com/webhook/8039d74d-d0d0-4cc6-b147-b76b9f6bd804";
 
 export const ASSISTANT_NAME = "Aria";
 
