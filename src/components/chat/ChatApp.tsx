@@ -208,7 +208,7 @@ export function ChatApp() {
                 <Message
                   key={message.id}
                   from={message.role}
-                  className="animate-rise-in items-end gap-3"
+                  className="animate-rise-in items-start gap-3"
                   style={{ flexDirection: "row" }}
                 >
                   {message.role === "assistant" && <AssistantAvatar />}
@@ -249,7 +249,7 @@ export function ChatApp() {
               {isSending && (
                 <Message
                   from="assistant"
-                  className="animate-rise-in items-end gap-3"
+                  className="animate-rise-in items-start gap-3"
                   style={{ flexDirection: "row" }}
                 >
                   <AssistantAvatar />
@@ -286,7 +286,7 @@ export function ChatApp() {
               aria-label="Message the assistant"
               value={input}
               onChange={(event) => setInput(event.currentTarget.value)}
-              placeholder="Type your message… (Enter to send, Shift + Enter for a new line)"
+              placeholder="Type your message…"
               className="bg-transparent text-foreground placeholder:text-muted-foreground"
             />
             <PromptInputFooter className="justify-between border-0 px-2 pb-1">
