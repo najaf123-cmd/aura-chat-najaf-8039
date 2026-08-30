@@ -187,7 +187,7 @@ export function ChatApp() {
                 <Message
                   key={message.id}
                   from={message.role}
-                  className="animate-rise-in items-start gap-3"
+                  className="animate-rise-in flex-row items-end gap-3"
                 >
                   {message.role === "assistant" && <AssistantAvatar />}
                   <MessageContent
@@ -225,7 +225,7 @@ export function ChatApp() {
               ))}
 
               {isSending && (
-                <Message from="assistant" className="animate-rise-in items-start gap-3">
+                <Message from="assistant" className="animate-rise-in flex-row items-end gap-3">
                   <AssistantAvatar />
                   <MessageContent className="rounded-2xl border border-glass-border bg-glass px-4 py-3">
                     <Shimmer>{ASSISTANT_NAME} is typing…</Shimmer>
