@@ -228,7 +228,7 @@ export function ChatApp() {
                 <Message from="assistant" className="animate-rise-in flex-row items-end gap-3">
                   <AssistantAvatar />
                   <MessageContent className="rounded-2xl border border-glass-border bg-glass px-4 py-3">
-                    <Shimmer>{ASSISTANT_NAME} is typing…</Shimmer>
+                    <Shimmer>{`${ASSISTANT_NAME} is typing…`}</Shimmer>
                   </MessageContent>
                 </Message>
               )}
@@ -269,7 +269,7 @@ export function ChatApp() {
               </span>
               <PromptInputSubmit
                 aria-label="Send message"
-                status={isSending ? "submitted" : undefined}
+                {...(isSending ? { status: "submitted" as const } : {})}
                 disabled={isSending || input.trim().length === 0}
                 className="bg-gradient-brand text-primary-foreground shadow-[var(--shadow-glow)]"
               />
