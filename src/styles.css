@@ -149,3 +149,136 @@
     color: var(--color-foreground);
   }
 }
+
+/* ---------------------------------------------------------------
+ * Chat themes. Applied via [data-theme] on the app shell wrapper.
+ * Each theme is a dark, high-contrast glass surface with two accents.
+ * ------------------------------------------------------------- */
+
+[data-theme] {
+  --radius: 1rem;
+  --foreground: oklch(0.98 0.005 250);
+  --card-foreground: var(--foreground);
+  --popover-foreground: var(--foreground);
+  --muted-foreground: oklch(0.78 0.03 250 / 78%);
+  --secondary-foreground: var(--foreground);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.65 0.2 22);
+  --destructive-foreground: oklch(0.99 0 0);
+  --input: oklch(1 0 0 / 12%);
+  --glass: oklch(1 0 0 / 7%);
+  --glass-border: oklch(1 0 0 / 14%);
+  --card: var(--glass);
+  --popover: oklch(0.2 0.04 265);
+  --border: var(--glass-border);
+  --secondary: oklch(1 0 0 / 10%);
+  --muted: oklch(1 0 0 / 8%);
+  --accent: oklch(1 0 0 / 12%);
+  --gradient-brand: linear-gradient(135deg, var(--brand), var(--brand-2));
+  --gradient-surface: linear-gradient(
+    160deg,
+    oklch(1 0 0 / 12%) 0%,
+    oklch(1 0 0 / 4%) 45%,
+    oklch(1 0 0 / 2%) 100%
+  );
+  --shadow-float: 0 24px 60px -20px oklch(0 0 0 / 60%),
+    0 2px 0 0 oklch(1 0 0 / 10%) inset;
+  --shadow-glow: 0 18px 50px -12px color-mix(in oklab, var(--brand) 55%, transparent);
+  --shadow-soft: 0 12px 30px -14px oklch(0 0 0 / 70%);
+}
+
+[data-theme="aurora"] {
+  --background: oklch(0.19 0.055 268);
+  --brand: oklch(0.64 0.19 275);
+  --brand-2: oklch(0.79 0.14 200);
+  --primary: var(--brand);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: var(--brand-2);
+}
+
+[data-theme="nebula"] {
+  --background: oklch(0.19 0.07 315);
+  --brand: oklch(0.62 0.22 310);
+  --brand-2: oklch(0.74 0.19 5);
+  --primary: var(--brand);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: var(--brand-2);
+}
+
+[data-theme="verdant"] {
+  --background: oklch(0.2 0.045 195);
+  --brand: oklch(0.68 0.15 168);
+  --brand-2: oklch(0.68 0.15 240);
+  --primary: var(--brand);
+  --primary-foreground: oklch(0.16 0.03 190);
+  --ring: var(--brand-2);
+}
+
+@utility glass-panel {
+  background-image: var(--gradient-surface);
+  background-color: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(28px) saturate(150%);
+  box-shadow: var(--shadow-float);
+}
+
+@utility text-gradient-brand {
+  background-image: var(--gradient-brand);
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-gradient-brand {
+  background-image: var(--gradient-brand);
+}
+
+@keyframes float-orb {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -6%, 0) scale(1.08);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-float-orb {
+  animation: float-orb 16s ease-in-out infinite;
+}
+
+.animate-rise-in {
+  animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-bob {
+  animation: bob 4.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-orb,
+  .animate-rise-in,
+  .animate-bob {
+    animation: none;
+  }
+}
