@@ -25,7 +25,6 @@ import avatarUrl from "@/assets/assistant-avatar.png";
 import { extractAnswer } from "@/lib/chat-response";
 import {
   ASSISTANT_NAME,
-  ASSISTANT_SYSTEM_INSTRUCTIONS,
   CHAT_WEBHOOK_URL,
   SUGGESTED_PROMPTS,
   WELCOME_MESSAGE,
@@ -45,6 +44,22 @@ const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
+
+function describeError(error: unknown): string {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return "the request timed out. Please try again in a moment.";
+  }
+  if (error instanceof TypeError) {
+    return (
+      "the request was blocked by the browser (network or CORS). Please check that the " +
+      `webhook at ${CHAT_WEBHOOK_URL} is running and allows requests from this page.`
+    );
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "an unexpected error occurred.";
+}
 
 function AssistantAvatar({ className }: { className?: string }) {
   return (
@@ -90,17 +105,25 @@ export function ChatApp() {
     });
 
     try {
-      const response = await fetch(CHAT_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: trimmed,
-          systemInstructions: ASSISTANT_SYSTEM_INSTRUCTIONS,
-        }),
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45_000);
+
+      let response: Response;
+      try {
+        response = await fetch(CHAT_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: trimmed }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       if (!response.ok) {
-        throw new Error(`The assistant service replied with ${response.status}.`);
+        throw new Error(
+          `the service answered with status ${response.status} (${response.statusText || "error"}).`,
+        );
       }
 
       const raw = await response.text();
@@ -109,15 +132,13 @@ export function ChatApp() {
         { id: newId(), role: "assistant", text: extractAnswer(raw) },
       ]);
     } catch (error) {
-      const reason =
-        error instanceof Error ? error.message : "An unexpected error occurred.";
       setMessages((prev) => [
         ...prev,
         {
           id: newId(),
           role: "assistant",
           error: true,
-          text: `I'm terribly sorry — I couldn't reach the assistant service. ${reason}`,
+          text: `I'm terribly sorry — I couldn't reach the assistant service: ${describeError(error)}`,
         },
       ]);
     } finally {
