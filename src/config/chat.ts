@@ -16,7 +16,7 @@ export const ASSISTANT_SYSTEM_INSTRUCTIONS =
   "Help guests choose a service, collect their name and phone number, and confirm an appointment time.";
 
 export const WELCOME_MESSAGE =
-  `Welcome to **${SALON_NAME}** ✨ I'm ${ASSISTANT_NAME}, your booking assistant. ` +
+  `Welcome to **${SALON_NAME}** — I'm ${ASSISTANT_NAME}, your booking assistant. ` +
   "Tell me which service you'd like and a day that suits you — I'll take your name and number and get you booked in.";
 
 export interface SalonService {
