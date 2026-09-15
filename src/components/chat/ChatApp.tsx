@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { RefreshCw, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle, Scissors, CheckCircle2 } from "lucide-react";
 
 import {
   Conversation,
@@ -20,14 +20,19 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { ServiceCards } from "./ServiceCards";
 import { DEFAULT_THEME, type ChatThemeId } from "./themes";
 import avatarUrl from "@/assets/assistant-avatar.png";
 import { extractAnswer } from "@/lib/chat-response";
+import { extractGuestDetails } from "@/lib/guest-details";
 import {
   ASSISTANT_NAME,
   CHAT_WEBHOOK_URL,
+  SALON_NAME,
+  SALON_TAGLINE,
   SUGGESTED_PROMPTS,
   WELCOME_MESSAGE,
+  type SalonService,
 } from "@/config/chat";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +57,7 @@ function describeError(error: unknown): string {
   if (error instanceof TypeError) {
     return (
       "the request was blocked by the browser (network or CORS). Please check that the " +
-      `webhook at ${CHAT_WEBHOOK_URL} is running and allows requests from this page.`
+      `booking service at ${CHAT_WEBHOOK_URL} is running and allows requests from this page.`
     );
   }
   if (error instanceof Error) {
@@ -88,63 +93,79 @@ export function ChatApp() {
   ]);
   const [isSending, setIsSending] = useState(false);
   const [input, setInput] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const lastUserMessage = useRef<string | null>(null);
 
-  const send = useCallback(async (text: string, isRetry = false) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
+  const send = useCallback(
+    async (text: string, isRetry = false) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
 
-    lastUserMessage.current = trimmed;
-    setIsSending(true);
+      lastUserMessage.current = trimmed;
+      setIsSending(true);
 
-    setMessages((prev) => {
-      const base = isRetry ? prev.filter((m) => !m.error) : prev;
-      return isRetry
-        ? base
-        : [...base, { id: newId(), role: "user" as Role, text: trimmed }];
-    });
+      // Pick up a name / phone number the guest typed naturally in chat.
+      const detected = extractGuestDetails(trimmed);
+      const guestName = name || detected.name || "";
+      const guestPhone = phone || detected.phone || "";
+      if (!name && detected.name) setName(detected.name);
+      if (!phone && detected.phone) setPhone(detected.phone);
 
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45_000);
+      setMessages((prev) => {
+        const base = isRetry ? prev.filter((m) => !m.error) : prev;
+        return isRetry
+          ? base
+          : [...base, { id: newId(), role: "user" as Role, text: trimmed }];
+      });
 
-      let response: Response;
       try {
-        response = await fetch(CHAT_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: trimmed }),
-          signal: controller.signal,
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 45_000);
+
+        let response: Response;
+        try {
+          response = await fetch(CHAT_WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: trimmed,
+              name: guestName,
+              phone: guestPhone,
+            }),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            `the booking service answered with status ${response.status} (${response.statusText || "error"}).`,
+          );
+        }
+
+        const raw = await response.text();
+        setMessages((prev) => [
+          ...prev,
+          { id: newId(), role: "assistant", text: extractAnswer(raw) },
+        ]);
+      } catch (error) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: newId(),
+            role: "assistant",
+            error: true,
+            text: `I'm terribly sorry — I couldn't reach the booking service: ${describeError(error)}`,
+          },
+        ]);
       } finally {
-        clearTimeout(timeout);
+        setIsSending(false);
       }
-
-      if (!response.ok) {
-        throw new Error(
-          `the service answered with status ${response.status} (${response.statusText || "error"}).`,
-        );
-      }
-
-      const raw = await response.text();
-      setMessages((prev) => [
-        ...prev,
-        { id: newId(), role: "assistant", text: extractAnswer(raw) },
-      ]);
-    } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: newId(),
-          role: "assistant",
-          error: true,
-          text: `I'm terribly sorry — I couldn't reach the assistant service: ${describeError(error)}`,
-        },
-      ]);
-    } finally {
-      setIsSending(false);
-    }
-  }, []);
+    },
+    [name, phone],
+  );
 
   const handleSubmit = useCallback(
     (_message: unknown, event: React.FormEvent<HTMLFormElement>) => {
@@ -162,7 +183,16 @@ export function ChatApp() {
     void send(lastUserMessage.current, true);
   }, [isSending, send]);
 
-  const showSuggestions = messages.length === 1 && !isSending;
+  const bookService = useCallback(
+    (service: SalonService) => {
+      void send(
+        `I'd like to book ${service.name} (${service.duration}, ${service.price}). What times are available?`,
+      );
+    },
+    [send],
+  );
+
+  const isFresh = messages.length === 1 && !isSending;
 
   return (
     <div
@@ -186,19 +216,57 @@ export function ChatApp() {
         {/* Header */}
         <header className="glass-panel mb-3 flex items-center justify-between gap-3 rounded-3xl px-3 py-2.5 sm:px-5 sm:py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <AssistantAvatar className="animate-bob size-10 sm:size-11" />
+            <span className="relative grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-brand text-primary-foreground shadow-[var(--shadow-glow)] sm:size-11">
+              <Scissors className="size-5" aria-hidden="true" />
+            </span>
             <div className="min-w-0">
               <h1 className="truncate font-display text-base font-semibold tracking-tight sm:text-lg">
-                {ASSISTANT_NAME}
-                <span className="text-gradient-brand"> · Assistant</span>
+                {SALON_NAME}
+                <span className="text-gradient-brand"> · Bookings</span>
               </h1>
               <p className="truncate text-xs text-muted-foreground">
-                {isSending ? "Composing a reply…" : "Always polite. Always here to help."}
+                {isSending ? `${ASSISTANT_NAME} is checking the diary…` : SALON_TAGLINE}
               </p>
             </div>
           </div>
           <ThemeSwitcher value={theme} onChange={setTheme} />
         </header>
+
+        {/* Services & prices */}
+        <ServiceCards onSelect={bookService} disabled={isSending} />
+
+        {/* Guest details */}
+        <div className="glass-panel mb-3 flex flex-col gap-2 rounded-2xl px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            {name && phone ? (
+              <CheckCircle2 className="size-3.5 text-brand" aria-hidden="true" />
+            ) : null}
+            Your details
+          </span>
+          <div className="flex flex-1 gap-2">
+            <label className="flex-1">
+              <span className="sr-only">Your name</span>
+              <input
+                value={name}
+                onChange={(event) => setName(event.currentTarget.value)}
+                placeholder="Name"
+                autoComplete="name"
+                className="w-full rounded-xl border border-glass-border bg-glass px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </label>
+            <label className="flex-1">
+              <span className="sr-only">Your phone number</span>
+              <input
+                value={phone}
+                onChange={(event) => setPhone(event.currentTarget.value)}
+                placeholder="Phone"
+                inputMode="tel"
+                autoComplete="tel"
+                className="w-full rounded-xl border border-glass-border bg-glass px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </label>
+          </div>
+        </div>
 
         {/* Transcript */}
         <div className="glass-panel relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl">
@@ -264,7 +332,7 @@ export function ChatApp() {
         </div>
 
         {/* Suggestions */}
-        {showSuggestions && (
+        {isFresh && (
           <div className="mt-3 flex flex-wrap gap-2">
             {SUGGESTED_PROMPTS.map((prompt) => (
               <button
@@ -283,10 +351,10 @@ export function ChatApp() {
         <div className="glass-panel mt-3 rounded-3xl p-2">
           <PromptInput onSubmit={handleSubmit} className="border-0 bg-transparent shadow-none">
             <PromptInputTextarea
-              aria-label="Message the assistant"
+              aria-label="Message the booking assistant"
               value={input}
               onChange={(event) => setInput(event.currentTarget.value)}
-              placeholder="Type your message…"
+              placeholder="Tell me the service, day and your name & number…"
               className="bg-transparent text-foreground placeholder:text-muted-foreground"
             />
             <PromptInputFooter className="justify-between border-0 px-2 pb-1">
